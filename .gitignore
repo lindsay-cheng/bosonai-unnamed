@@ -1,0 +1,53 @@
+# environment variables & api keys
+.env
+.env.local
+.env.development
+.env.production
+*.key
+config/secrets.json
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# generated audio files & voice logs
+backend/temp/*
+backend/voices/*.wav
+backend/voices/*.mp3
+backend/voices/*.ogg
+*.log
+logs/
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.vite/
+
+# ide & editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# os
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# project documentation
+🧾 Project Requirements Document (PRD).txt
+
+# misc
+*.bak
+*.tmp
+.cache/
