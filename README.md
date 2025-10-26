@@ -1,5 +1,7 @@
 ## Fuzzy Logic — We Bare Bears Council Edition
 
+![Bearstack](frontend/assets/Bearstack.webp)
+
 Fuzzy Logic brings the iconic bear trio to help with life's everyday dilemmas. Ask Grizzly, Panda, and Ice Bear any question from "Should I text my ex?" to "Is cereal a soup?"—and hear them debate in their iconic voices using BosonAI's voice cloning technology. It's a nostalgic, silly throwback that turns the We Bare Bears trio into your personal advisory council.
 
 ### Features
