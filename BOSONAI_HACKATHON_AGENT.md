@@ -1,43 +1,5 @@
-## The Jury — We Bare Bears Council Edition
-
-An AI-powered conversational system featuring the three We Bare Bears as your personal advisory council.
-
-### Features
-
-- **Voice Input**: Speak your questions using Gemini ASR
-- **Three Bear Personalities**: Get opinions from Grizzly, Panda, and Ice Bear
-- **Voice Responses**: Hear each bear speak using BosonAI TTS with voice cloning
-- **Follow-up Questions**: Continue the conversation with contextual responses
-- **Character-Accurate**: Each bear maintains their unique personality
-
-### Architecture
-
-**Full Audio Pipeline:**
-1. User records audio → Gemini ASR transcribes to text
-2. Text → Gemini LLM generates each bear's opinion (with personality)
-3. Opinions → BosonAI TTS synthesizes audio for each bear
-4. Frontend plays audio responses sequentially
-
-**Stack:**
-- Frontend: Next.js 15 + TypeScript + Tailwind CSS
-- Backend: Flask + Python
-- Speech-to-Text: Google Gemini Multimodal
-- Text Generation: Google Gemini 2.5
-- Text-to-Speech: BosonAI Higgs Audio Generation
-
-### Environment Setup
-
-Backend requires:
-- `BOSON_API_KEY` (BosonAI for TTS)
-- `GOOGLE_API_KEY` (Gemini for ASR + LLM)
-
-Frontend requires:
-- `NEXT_PUBLIC_API_URL` (Backend URL, defaults to http://localhost:8080)
-
----
-
 ## BosonAI Hackathon API — Agent Readme
- 
+
 ### Overview
 
 - **Protocol**: OpenAI-compatible REST API under a single base URL.
@@ -248,10 +210,10 @@ curl -X POST "https://hackathon.boson.ai/v1/chat/completions" \
 
 ### Sources
 
-- Repo: [boson-ai/hackathon-msac-public](https://github.com/boson-ai/hackathon-msac-public)
-- API doc: [api_doc.md](https://github.com/boson-ai/hackathon-msac-public/blob/main/api_doc.md)
-- Cloning example: [cloning_example.py](https://github.com/boson-ai/hackathon-msac-public/blob/main/cloning_example.py)
-- Streaming — live playback: [streaming_example_live_playback.py](https://github.com/boson-ai/hackathon-msac-public/blob/main/streaming_examples/streaming_example_live_playback.py)
-- Streaming — save to file: [streaming_example_save_to_file.py](https://github.com/boson-ai/hackathon-msac-public/blob/main/streaming_examples/streaming_example_save_to_file.py)
+- Repo: `https://github.com/boson-ai/hackathon-msac-public`
+- API doc: `https://github.com/boson-ai/hackathon-msac-public/blob/main/api_doc.md`
+- Cloning example: `https://github.com/boson-ai/hackathon-msac-public/blob/main/cloning_example.py`
+- Streaming — live playback: `https://github.com/boson-ai/hackathon-msac-public/blob/main/streaming_examples/streaming_example_live_playback.py`
+- Streaming — save to file: `https://github.com/boson-ai/hackathon-msac-public/blob/main/streaming_examples/streaming_example_save_to_file.py`
 
 

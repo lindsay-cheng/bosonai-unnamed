@@ -1,6 +1,8 @@
 from openai import OpenAI
 import base64
 import os
+import io
+import wave
 
 
 class TTSService:
@@ -49,10 +51,14 @@ class TTSService:
         Returns:
             audio data as bytes (WAV format)
         """
+        # If reference audio is missing, fall back to simple TTS
+        if not ref_audio_path or not os.path.exists(ref_audio_path):
+            return self._simple_tts(text)
+
         try:
             # encode reference audio
             reference_audio_b64 = self._b64_encode(ref_audio_path)
-            
+
             # build messages array
             messages = [
                 {"role": "system", "content": self.system_prompt},
@@ -65,15 +71,15 @@ class TTSService:
                     }],
                 },
             ]
-            
+
             # add conversation history if provided
             if conversation_history:
                 messages.extend(conversation_history)
-            
+
             # add current text request
             messages.append({"role": "user", "content": f"{speaker_tag} {text}"})
-            
-            # call BosonAI API
+
+            # call BosonAI API for cloning
             resp = self.client.chat.completions.create(
                 model="higgs-audio-generation-Hackathon",
                 messages=messages,
@@ -85,11 +91,31 @@ class TTSService:
                 stop=["<|eot_id|>", "<|end_of_text|>", "<|audio_eos|>"],
                 extra_body={"top_k": 50},
             )
-            
+
             # extract and decode audio
             audio_b64 = resp.choices[0].message.audio.data
             return base64.b64decode(audio_b64)
-        
-        except Exception as e:
-            raise Exception(f"BosonAI speech synthesis failed: {str(e)}")
+
+        except Exception:
+            # graceful fallback to simple TTS if cloning fails
+            return self._simple_tts(text)
+
+    def _simple_tts(self, text: str) -> bytes:
+        """Simple TTS fallback (no cloning). Returns WAV bytes."""
+        # Request PCM16 stream and wrap into WAV container in-memory
+        res = self.client.audio.speech.create(
+            model="higgs-audio-generation-Hackathon",
+            voice="en_woman",
+            input=text,
+            response_format="pcm",
+        )
+
+        pcm_bytes = res.content
+        wav_buffer = io.BytesIO()
+        with wave.open(wav_buffer, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 16-bit PCM
+            wf.setframerate(24000)
+            wf.writeframes(pcm_bytes)
+        return wav_buffer.getvalue()
 

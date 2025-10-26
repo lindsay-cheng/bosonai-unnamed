@@ -16,21 +16,36 @@ venv/
 env/
 ENV/
 .venv
+*.egg-info/
+dist/
+build/
+*.egg
+
+# backend
+backend/venv/
+backend/temp/
+backend/.pytest_cache/
 
 # generated audio files & voice logs
-backend/temp/*
 backend/voices/*.wav
 backend/voices/*.mp3
 backend/voices/*.ogg
 *.log
 logs/
 
-# frontend
+# frontend - Node
 frontend/node_modules/
 frontend/dist/
 frontend/build/
 frontend/.next/
 frontend/.vite/
+frontend/.turbo/
+frontend/out/
+frontend/.pnpm-store/
+
+# frontend - Build artifacts
+*.tsbuildinfo
+.vercel
 
 # ide & editors
 .vscode/
@@ -38,16 +53,19 @@ frontend/.vite/
 *.swp
 *.swo
 *~
+.cursor/
 
 # os
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# project documentation
-The Jury PRD.txt
+*.lnk
 
 # misc
 *.bak
 *.tmp
 .cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

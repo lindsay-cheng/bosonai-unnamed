@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from dotenv import load_dotenv
 from jury_engine import JuryEngine
-from services import WhisperService
+from services import GeminiASRService
 import traceback
 
 # load environment variables
@@ -16,7 +16,6 @@ CORS(app)
 # get API keys from environment
 BOSON_API_KEY = os.getenv('BOSON_API_KEY')
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # check required keys
 if not BOSON_API_KEY:
@@ -30,21 +29,20 @@ if BOSON_API_KEY and GOOGLE_API_KEY:
     try:
         engine = JuryEngine(
             boson_api_key=BOSON_API_KEY,
-            google_api_key=GOOGLE_API_KEY,
-            openai_api_key=OPENAI_API_KEY
+            google_api_key=GOOGLE_API_KEY
         )
         print("✓ Jury engine initialized successfully")
     except Exception as e:
         print(f"✗ Failed to initialize jury engine: {str(e)}")
 
-# initialize whisper service (for ASR)
-whisper_service = None
-if OPENAI_API_KEY:
+# initialize gemini ASR service
+asr_service = None
+if GOOGLE_API_KEY:
     try:
-        whisper_service = WhisperService(api_key=OPENAI_API_KEY)
-        print("✓ Whisper ASR initialized successfully")
+        asr_service = GeminiASRService(api_key=GOOGLE_API_KEY)
+        print("✓ Gemini ASR initialized successfully")
     except Exception as e:
-        print(f"✗ Failed to initialize Whisper: {str(e)}")
+        print(f"✗ Failed to initialize Gemini ASR: {str(e)}")
 
 # create temp directory for audio files
 TEMP_DIR = os.path.join(os.path.dirname(__file__), 'temp')
@@ -59,7 +57,7 @@ def health_check():
         'services': {
             'bosonai_tts': 'connected' if BOSON_API_KEY else 'not configured',
             'google_gemini': 'connected' if GOOGLE_API_KEY else 'not configured',
-            'openai_whisper': 'connected' if OPENAI_API_KEY else 'not configured'
+            'gemini_asr': 'connected' if asr_service else 'not configured'
         },
         'engine': 'initialized' if engine else 'not initialized'
     })
@@ -74,86 +72,100 @@ def get_jury_members():
     members = [{
         'id': member.id,
         'name': member.name,
-        'emoji': member.emoji,
         'stance': member.stance
     } for member in engine.jury_members]
     
     return jsonify(members)
 
 
-@app.route('/api/verdict', methods=['POST'])
-def generate_verdict():
-    """generate jury deliberation for a question"""
+@app.route('/api/opinions', methods=['POST'])
+def generate_opinions():
+    """generate bear opinions with audio for a question or audio file"""
     try:
-        # validate request
-        data = request.get_json()
-        if not data or 'question' not in data:
-            return jsonify({'error': 'Question is required'}), 400
+        question = None
+        conversation_history = []
         
-        question = data['question'].strip()
+        if 'audio' in request.files:
+            if not asr_service:
+                return jsonify({'error': 'ASR service not configured'}), 500
+            
+            audio_file = request.files['audio']
+            if audio_file.filename == '':
+                return jsonify({'error': 'No file selected'}), 400
+            
+            print(f"Transcribing audio file: {audio_file.filename}")
+            result = asr_service.transcribe_audio(audio_file)
+            question = result['text']
+            print(f"Transcription: {question}")
+            
+            if request.form.get('conversation_history'):
+                import json
+                conversation_history = json.loads(request.form.get('conversation_history'))
+        else:
+            data = request.get_json()
+            if not data or 'question' not in data:
+                return jsonify({'error': 'Question or audio file is required'}), 400
+            
+            question = data['question'].strip()
+            conversation_history = data.get('conversation_history', [])
         
-        # validate question length
-        if len(question) < 10:
-            return jsonify({'error': 'Question must be at least 10 characters'}), 400
+        if len(question) < 3:
+            return jsonify({'error': 'Question must be at least 3 characters'}), 400
         if len(question) > 500:
             return jsonify({'error': 'Question must be less than 500 characters'}), 400
         
         if not engine:
-            return jsonify({'error': 'BosonAI API not configured'}), 500
+            return jsonify({'error': 'Engine not initialized'}), 500
         
-        print(f"Generating verdict for: {question}")
+        print(f"Generating opinions for: {question}")
         
-        # generate deliberation
-        result = engine.generate_deliberation(question)
+        result = engine.generate_deliberation_with_audio(question, conversation_history)
         
-        # create unique verdict ID
-        verdict_id = str(uuid.uuid4())
-        verdict_dir = os.path.join(TEMP_DIR, verdict_id)
-        os.makedirs(verdict_dir, exist_ok=True)
+        session_id = str(uuid.uuid4())
+        session_dir = os.path.join(TEMP_DIR, session_id)
+        os.makedirs(session_dir, exist_ok=True)
         
-        # save audio files and build response
-        deliberation = []
-        for idx, (entry, audio_bytes) in enumerate(zip(result['script'], result['audio_files'])):
+        opinions = []
+        for idx, (entry, audio_bytes) in enumerate(zip(result['opinions'], result['audio_files'])):
             member = entry['member']
             
-            # save audio file
+            audio_index = None
             if audio_bytes:
-                audio_path = os.path.join(verdict_dir, f'{idx}.wav')
+                audio_path = os.path.join(session_dir, f'{idx}.wav')
                 with open(audio_path, 'wb') as f:
                     f.write(audio_bytes)
+                audio_index = idx
             
-            deliberation.append({
+            opinions.append({
                 'speaker': member.name,
-                'emoji': member.emoji,
                 'text': entry['text'],
-                'stage': entry['stage'],
-                'audio_index': idx if audio_bytes else None
+                'audio_index': audio_index
             })
         
         response = {
-            'verdict_id': verdict_id,
+            'session_id': session_id,
             'question': question,
-            'verdict': result['verdict'],
-            'deliberation': deliberation
+            'opinions': opinions
         }
         
-        print(f"Verdict generated: {result['verdict']}")
+        print(f"✓ Generated {len(opinions)} opinions with audio")
         return jsonify(response)
     
     except Exception as e:
-        print(f"Error generating verdict: {str(e)}")
+        print(f"Error generating opinions: {str(e)}")
         print(traceback.format_exc())
+        error_message = str(e)
         return jsonify({
-            'error': 'Failed to generate verdict',
-            'details': str(e)
+            'error': f'Failed to generate opinions: {error_message}',
+            'details': error_message
         }), 500
 
 
-@app.route('/api/audio/<verdict_id>/<int:index>', methods=['GET'])
-def get_audio(verdict_id, index):
-    """serve audio file for a specific verdict and index"""
+@app.route('/api/audio/<session_id>/<int:index>', methods=['GET'])
+def get_audio(session_id, index):
+    """serve audio file for a specific session and bear index"""
     try:
-        audio_path = os.path.join(TEMP_DIR, verdict_id, f'{index}.wav')
+        audio_path = os.path.join(TEMP_DIR, session_id, f'{index}.wav')
         
         if not os.path.exists(audio_path):
             return jsonify({'error': 'Audio file not found'}), 404
@@ -167,25 +179,22 @@ def get_audio(verdict_id, index):
 
 @app.route('/api/transcribe', methods=['POST'])
 def transcribe_audio():
-    """transcribe audio file to text using Whisper ASR"""
+    """transcribe audio file to text using Gemini ASR"""
     try:
-        if not whisper_service:
-            return jsonify({'error': 'Whisper ASR not configured'}), 500
+        if not asr_service:
+            return jsonify({'error': 'ASR service not configured'}), 500
         
-        # check if audio file is in request
         if 'audio' not in request.files:
             return jsonify({'error': 'Audio file is required'}), 400
         
         audio_file = request.files['audio']
         
-        # validate file
         if audio_file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
         print(f"Transcribing audio file: {audio_file.filename}")
         
-        # transcribe audio
-        result = whisper_service.transcribe_audio(audio_file)
+        result = asr_service.transcribe_audio(audio_file)
         
         print(f"Transcription result: {result['text'][:50]}...")
         
@@ -208,28 +217,28 @@ def index():
     """root endpoint with API info"""
     return jsonify({
         'name': 'The Jury API',
-        'version': '1.0.0',
-        'description': 'AI voice-based decision oracle with Chinese Zodiac personalities',
+        'version': '2.0.0',
+        'description': 'AI voice-based conversation with We Bare Bears personalities - Powered by Gemini + BosonAI',
         'endpoints': {
             'GET /health': 'Health check',
-            'GET /api/jury-members': 'List all zodiac jury members',
-            'POST /api/transcribe': 'Transcribe audio to text (voice input)',
-            'POST /api/verdict': 'Generate verdict for a question',
-            'GET /api/audio/<verdict_id>/<index>': 'Get audio file'
+            'GET /api/jury-members': 'List all We Bare Bears jury members',
+            'POST /api/transcribe': 'Transcribe audio to text using Gemini',
+            'POST /api/opinions': 'Generate bear opinions with audio (accepts audio file or JSON with question)',
+            'GET /api/audio/<session_id>/<index>': 'Get audio file for a bear response'
         }
     })
 
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 8080))
     print("\n" + "="*50)
-    print("🐉 THE JURY - Chinese Zodiac Decision Oracle 🐵")
+    print("THE JURY - We Bare Bears Council")
     print("="*50)
     print(f"Port: {port}")
     print(f"Services:")
     print(f"  - BosonAI TTS: {'✓' if BOSON_API_KEY else '✗'}")
-    print(f"  - Google Gemini: {'✓' if GOOGLE_API_KEY else '✗'}")
-    print(f"  - OpenAI Whisper: {'✓' if OPENAI_API_KEY else '✗'}")
+    print(f"  - Google Gemini LLM: {'✓' if GOOGLE_API_KEY else '✗'}")
+    print(f"  - Gemini ASR: {'✓' if asr_service else '✗'}")
     print(f"Engine: {'✓ Ready' if engine else '✗ Not initialized'}")
     print("="*50 + "\n")
     app.run(debug=True, host='0.0.0.0', port=port)

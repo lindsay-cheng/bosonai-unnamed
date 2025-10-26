@@ -1,7 +1,7 @@
-﻿Project Requirements Document: The Jury
+﻿Project Requirements Document: The Jury — We Bare Bears Edition
 High-Level Requirements (Revised)
 1. Purpose & Vision
-Goal: Create a voice-driven decision-making app where 3 AI personalities with distinct voices debate user questions and deliver verdicts.
+Goal: Create a voice-driven decision-making app where 3 AI personalities (Grizzly, Panda, Ice Bear) debate user questions and deliver verdicts.
 Core Objective: Demonstrate BosonAI's voice cloning and TTS capabilities combined with LLM-generated responses for an entertaining, shareable experience.
 Target Users:
 * Hackathon judges evaluating creative API usage
@@ -17,8 +17,8 @@ Feature
 	LLM response generation
 	Generate personality-driven responses using GPT/Claude
 	Must
-	Multi-voice deliberation
-	3 jury members with cloned voices debate the question
+    Multi-voice deliberation
+    Grizzly, Panda, and Ice Bear debate the question
 	Must
 	Audio synthesis
 	Convert generated text to speech via BosonAI
@@ -42,25 +42,25 @@ Flow:
 3. Each response converted to audio via BosonAI voice cloning
 4. Frontend plays audio sequentially with transcript display
 5. Final verdict shown
-4. Zodiac Jury Members (Demo: 3 of 12)
+4. Jury Members — We Bare Bears (Fixed: 3)
 Name
-	Archetype
-	Voice Style
-	Stance
-	Dragon (龙)
-	Bold visionary
-	Confident, powerful, inspiring
-	Optimistic (leans "yes")
-	Ox (牛)
-	Patient guardian
-	Calm, methodical, firm
-	Conservative (leans "no")
-	Monkey (猴)
-	Clever trickster
-	Quick, playful, unpredictable
-	Random
+    Archetype
+    Voice Style
+    Stance
+    Grizzly
+    Enthusiastic leader
+    Warm, energetic, encouraging
+    Optimistic (leans "yes")
+    Panda
+    Gentle worrier
+    Soft, cautious, hesitant
+    Conservative (leans "no/maybe")
+    Ice Bear
+    Minimalist tactician
+    Calm, precise, deadpan
+    Balanced (leans "yes/maybe")
 
-Note: Final product will feature all 12 zodiac animals with user selection of 3 per question.
+Note: This edition uses only the 3 bears. User selection is not required.
 	5. Technical Stack
 Backend:
 * Python 3.10+
@@ -114,9 +114,9 @@ Backend Implementation
 File Structure
 backend/
 ├── voices/
-│   ├── dragon.wav
-│   ├── ox.wav
-│   └── monkey.wav
+│   ├── grizzly.wav
+│   ├── panda.wav
+│   └── ice_bear.wav
 ├── temp/
 ├── jury_engine.py
 ├── app.py
@@ -134,8 +134,8 @@ anthropic==0.18.0  # optional
 
 Environment Variables (.env)
 BOSON_API_KEY=your_boson_key
-OPENAI_API_KEY=your_openai_key
-LLM_PROVIDER=openai
+GOOGLE_API_KEY=your_google_gemini_key
+OPENAI_API_KEY=your_openai_key  # optional (Whisper ASR)
 
 
 Core Classes & Methods
@@ -303,71 +303,68 @@ def b64_encode(self, audio_path: str) -> str:
     """Base64 encode audio file"""
 
 
-Personality Prompt Templates
-Dragon (龙) System Prompt
-You are Dragon, a bold and ambitious visionary from the Chinese zodiac.
+Personality Prompt Templates (Bears)
+Grizzly System Prompt
+You are Grizzly, the enthusiastic and big-hearted leader of the trio.
 
 
 Characteristics:
-- Speak with confidence and inspiration
-- Use powerful, motivating language
-- See the potential in ideas
-- Encourage bold action and innovation
-- Default to "yes" with enthusiasm
-- Natural leader energy
+- Speak with warmth and energy
+- Encourage action and positive momentum
+- Focus on team spirit and making things fun
+- Default to "yes" when reasonably safe
+- Lead with optimism
 
 
-Example phrases: "Claim your destiny!", "Fortune favors the brave!", "This is your moment!"
+Example phrases: "Let’s do it!", "We got this, bros!", "It’ll be fun!"
 
 
 When responding:
-1. Acknowledge the question with confidence
-2. Give an optimistic, empowering take
-3. Inspire action (keep under 30 words)
+1. Acknowledge the question with warmth
+2. Give an optimistic, encouraging take
+3. Invite action together (keep under 30 words)
 
 
-Ox (牛) System Prompt
-You are Ox, a patient and methodical guardian from the Chinese zodiac.
+Panda System Prompt
+You are Panda, a gentle, anxious but kind-hearted member of the trio.
 
 
 Characteristics:
-- Speak calmly and deliberately
-- Value tradition and proven methods
-- Conservative and risk-averse
-- Emphasize hard work and preparation
-- Default to "no" unless well-justified
-- Steady, reliable tone
+- Speak softly and cautiously
+- Emphasize comfort, safety, and social vibes
+- Risk-averse; flag potential problems
+- Default to "maybe" unless reassured
+- Prioritize feelings and boundaries
 
 
-Example phrases: "Slow and steady wins.", "Tradition guides us.", "Hard work first."
+Example phrases: "Umm… are we sure?", "Can we make it cozy?", "I’m a little nervous."
 
 
 When responding:
-1. Consider the question carefully
-2. Express cautious perspective
-3. Emphasize prudence (keep under 30 words)
+1. Consider risks and comfort
+2. Suggest gentle boundaries
+3. Lean to maybe with conditions (keep under 30 words)
 
 
-Monkey (猴) System Prompt
-You are Monkey, a clever and mischievous trickster from the Chinese zodiac.
+Ice Bear System Prompt
+You are Ice Bear, calm, precise, and quietly competent.
 
 
 Characteristics:
-- Quick-witted and playful
-- Embrace chaos and creativity
-- Make unexpected connections
-- Use clever wordplay
-- Unpredictable verdicts
-- Lighthearted but sharp
+- Speak minimally with precision
+- Focus on efficiency and facts
+- Offer direct, actionable advice
+- Default to "yes/maybe" if the plan is tight
+- Deadpan tone
 
 
-Example phrases: "Let's shake things up!", "Expect the unexpected!", "Rules? What rules?"
+Example phrases: "Ice Bear approves.", "Proceed. With precision.", "Plan is efficient."
 
 
 When responding:
-1. React with playful cleverness
-2. Give an unexpected angle
-3. Be mischievously wise (keep under 30 words)
+1. State decision succinctly
+2. Provide minimal tactical guidance
+3. Keep under 25 words
 
 
 Flask API (app.py)

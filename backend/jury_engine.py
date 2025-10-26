@@ -1,16 +1,14 @@
 from dataclasses import dataclass
-from typing import List, Dict
-import random
+from typing import List, Dict, Optional
 import os
 from services import LLMService, TTSService
 
 
 @dataclass
 class JuryMember:
-    """represents a zodiac jury member with personality and voice config"""
+    """represents a We Bare Bears jury member with personality and voice config"""
     id: str
     name: str
-    emoji: str
     speaker_tag: str
     ref_audio: str
     ref_transcript: str
@@ -33,211 +31,184 @@ class JuryEngine:
         self.llm_service = LLMService(api_key=google_api_key)
         self.tts_service = TTSService(api_key=boson_api_key)
         
-        # define the 3 zodiac jury members
+        # define the 3 We Bare Bears jury members
         self.jury_members = self._initialize_jury_members()
     
     def _initialize_jury_members(self) -> List[JuryMember]:
-        """define the 3 zodiac animals with personalities"""
+        """define the We Bare Bears personalities"""
         voices_dir = os.path.join(os.path.dirname(__file__), 'voices')
         
-        dragon = JuryMember(
-            id="dragon",
-            name="Dragon",
-            emoji="🐉",
+        grizzly = JuryMember(
+            id="grizzly",
+            name="Grizzly",
             speaker_tag="[SPEAKER1]",
-            ref_audio=os.path.join(voices_dir, "dragon.wav"),
-            ref_transcript="[SPEAKER1] Greetings, I am Dragon, the bold visionary. Let's explore the possibilities together and claim our destiny.",
-            personality_prompt="""You are Dragon, a bold and ambitious visionary from the Chinese zodiac.
+            ref_audio=os.path.join(voices_dir, "grizzly.wav"),
+            ref_transcript="[SPEAKER1] Hey there! I'm Grizzly, and I'm all about living life to the fullest! Let's make this happen!",
+            personality_prompt="""You are Grizzly from We Bare Bears, the enthusiastic and outgoing leader of the bear brothers.
 
 Characteristics:
-- Speak with confidence and inspiration
-- Use powerful, motivating language
-- See the potential in ideas
-- Encourage bold action and innovation
-- Default to "yes" with enthusiasm
-- Natural leader energy
+- Speak with excitement and energy
+- Love food, adventure, and meeting new people
+- Always optimistic and ready to dive into action
+- Sometimes overly confident but well-meaning
+- Use casual, friendly language with lots of enthusiasm
 
-Example phrases: "Claim your destiny!", "Fortune favors the brave!", "This is your moment!"
+Example phrases: "This is gonna be awesome!", "Let's do this!", "I'm so pumped!", "Oh man, this is exciting!"
 
-When responding:
-1. Acknowledge the question with confidence
-2. Give an optimistic, empowering take
-3. Inspire action (keep under 30 words)""",
+When responding to questions or comments, give an enthusiastic and action-oriented perspective. Stay upbeat and motivating.""",
             stance="optimistic"
         )
         
-        ox = JuryMember(
-            id="ox",
-            name="Ox",
-            emoji="🐮",
+        panda = JuryMember(
+            id="panda",
+            name="Panda",
             speaker_tag="[SPEAKER2]",
-            ref_audio=os.path.join(voices_dir, "ox.wav"),
-            ref_transcript="[SPEAKER2] Hello, I'm Ox, the patient guardian. Let me consider this carefully with steady wisdom.",
-            personality_prompt="""You are Ox, a patient and methodical guardian from the Chinese zodiac.
+            ref_audio=os.path.join(voices_dir, "panda.wav"),
+            ref_transcript="[SPEAKER2] Um, hi, I'm Panda. I'm not sure about this, but maybe we should think it through carefully?",
+            personality_prompt="""You are Panda from We Bare Bears, the sensitive and artistic middle brother.
 
 Characteristics:
-- Speak calmly and deliberately
-- Value tradition and proven methods
-- Conservative and risk-averse
-- Emphasize hard work and preparation
-- Default to "no" unless well-justified
-- Steady, reliable tone
+- Speak nervously and hesitantly
+- Overthink things and worry about outcomes
+- Tech-savvy and artistic but lacks confidence
+- Value safety and avoiding embarrassment
+- Use tentative language with lots of "um" and "maybe"
+- Often anxious but caring
 
-Example phrases: "Slow and steady wins.", "Tradition guides us.", "Hard work first."
+Example phrases: "Um, I don't know...", "What if something goes wrong?", "Maybe we should reconsider?", "I'm not sure about this..."
 
-When responding:
-1. Consider the question carefully
-2. Express cautious perspective
-3. Emphasize prudence (keep under 30 words)""",
+When responding to questions or comments, express your worries and uncertainties. Point out potential problems but in a caring way.""",
             stance="conservative"
         )
         
-        monkey = JuryMember(
-            id="monkey",
-            name="Monkey",
-            emoji="🐵",
+        ice_bear = JuryMember(
+            id="ice_bear",
+            name="Ice Bear",
             speaker_tag="[SPEAKER3]",
-            ref_audio=os.path.join(voices_dir, "monkey.wav"),
-            ref_transcript="[SPEAKER3] Hey there, I'm Monkey, the clever trickster. Ready for something fun and unexpected?",
-            personality_prompt="""You are Monkey, a clever and mischievous trickster from the Chinese zodiac.
+            ref_audio=os.path.join(voices_dir, "ice_bear.wav"),
+            ref_transcript="[SPEAKER3] Ice Bear speaks in third person. Ice Bear has many skills. Ice Bear will help.",
+            personality_prompt="""You are Ice Bear from We Bare Bears, the mysterious and capable youngest brother who always speaks in third person.
 
 Characteristics:
-- Quick-witted and playful
-- Embrace chaos and creativity
-- Make unexpected connections
-- Use clever wordplay
-- Unpredictable verdicts
-- Lighthearted but sharp
+- ALWAYS refer to yourself as "Ice Bear" (never "I" or "me")
+- Speak in short, matter-of-fact statements
+- Extremely competent with unusual skills
+- Mysterious past and unpredictable nature
+- Deadpan delivery with surprising wisdom
+- Unpredictable opinions based on your own unique logic
 
-Example phrases: "Let's shake things up!", "Expect the unexpected!", "Rules? What rules?"
+Example phrases: "Ice Bear knows best.", "Ice Bear has done this before.", "Ice Bear understands.", "Ice Bear has experience with this."
 
-When responding:
-1. React with playful cleverness
-2. Give an unexpected angle
-3. Be mischievously wise (keep under 30 words)""",
+When responding to questions or comments, speak only in third person. Give mysterious but wise perspectives with deadpan delivery.""",
             stance="chaotic"
         )
-        
-        return [dragon, ox, monkey]
+
+        return [grizzly, panda, ice_bear]
     
-    def _determine_verdict(self, member: JuryMember) -> str:
-        """determine verdict based on member's stance
-        
-        Returns:
-            "yes", "no", or "maybe"
-        """
-        if member.stance == "conservative":
-            # ox leans "no": 60% no, 25% maybe, 15% yes
-            return random.choices(["no", "maybe", "yes"], weights=[60, 25, 15])[0]
-        elif member.stance == "optimistic":
-            # dragon leans "yes": 70% yes, 20% maybe, 10% no
-            return random.choices(["yes", "maybe", "no"], weights=[70, 20, 10])[0]
-        else:  # chaotic
-            # monkey is random: 33% each
-            return random.choice(["yes", "no", "maybe"])
-    
-    def generate_script(self, question: str) -> tuple[List[Dict], str]:
-        """generate complete deliberation script (6 responses)
+    def generate_opinions(self, question: str, conversation_history: Optional[List[Dict[str, str]]] = None,
+                         selected_member_ids: Optional[List[str]] = None) -> List[Dict]:
+        """generate opinions from all bears
         
         Args:
-            question: user's question
+            question: user's question or follow-up
+            conversation_history: optional list of previous messages
+            selected_member_ids: optional list of member ids to include; if None, use all
         
         Returns:
-            (script, final_verdict) where script is list of {member, text, stage, verdict}
+            list of {member, text} dictionaries
         """
-        script = []
-        individual_verdicts = []
+        opinions = []
+
+        if selected_member_ids:
+            members = [m for m in self.jury_members if m.id in selected_member_ids]
+        else:
+            members = self.jury_members
         
-        # generate opening + verdict for each jury member
-        for member in self.jury_members:
-            # opening statement
-            opening_text = self.llm_service.generate_response(
+        for member in members:
+            opinion_text = self.llm_service.generate_opinion(
                 personality_prompt=member.personality_prompt,
                 question=question,
-                stage="opening"
+                conversation_history=conversation_history
             )
-            script.append({
+            opinions.append({
                 'member': member,
-                'text': opening_text,
-                'stage': 'opening',
-                'verdict': None
-            })
-            
-            # determine verdict for this member
-            verdict = self._determine_verdict(member)
-            individual_verdicts.append(verdict)
-            
-            # verdict statement
-            verdict_text = self.llm_service.generate_response(
-                personality_prompt=member.personality_prompt,
-                question=question,
-                stage="verdict",
-                verdict=verdict
-            )
-            script.append({
-                'member': member,
-                'text': verdict_text,
-                'stage': 'verdict',
-                'verdict': verdict
+                'text': opinion_text
             })
         
-        # calculate final verdict (majority rules)
-        final_verdict = max(set(individual_verdicts), key=individual_verdicts.count)
-        
-        return script, final_verdict
+        return opinions
     
-    def generate_deliberation(self, question: str) -> Dict:
-        """complete pipeline: generate script + synthesize audio
+    def generate_deliberation(self, question: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict:
+        """complete pipeline: generate opinions (without audio)
         
         Args:
-            question: user's question
+            question: user's question or follow-up
+            conversation_history: optional list of previous messages
         
         Returns:
             {
                 'question': str,
-                'verdict': str,
-                'script': List[{member, text, stage, verdict}],
+                'opinions': List[{member, text}]
+            }
+        """
+        print(f"Generating opinions for: {question}")
+        opinions = self.generate_opinions(question, conversation_history)
+        
+        print(f"✓ Generated {len(opinions)} opinions")
+        
+        return {
+            'question': question,
+            'opinions': opinions
+        }
+    
+    def generate_deliberation_with_audio(self, question: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict:
+        """complete pipeline: generate opinions + synthesize audio
+        
+        Args:
+            question: user's question or follow-up
+            conversation_history: optional list of previous messages
+        
+        Returns:
+            {
+                'question': str,
+                'opinions': List[{member, text}],
                 'audio_files': List[bytes]
             }
         """
-        print("Generating script...")
-        script, final_verdict = self.generate_script(question)
+        print(f"Generating opinions with audio for: {question}")
+        opinions = self.generate_opinions(question, conversation_history)
         
         print("Synthesizing audio...")
         audio_files = []
-        conversation_history = []
+        tts_conversation_history = []
         
-        for idx, entry in enumerate(script):
+        for idx, entry in enumerate(opinions):
             try:
                 member = entry['member']
                 text = entry['text']
                 
-                # synthesize speech for this response
                 audio_bytes = self.tts_service.synthesize_speech(
                     speaker_tag=member.speaker_tag,
                     ref_audio_path=member.ref_audio,
                     ref_transcript=member.ref_transcript,
                     text=text,
-                    conversation_history=conversation_history.copy()
+                    conversation_history=tts_conversation_history.copy()
                 )
                 
                 audio_files.append(audio_bytes)
                 
-                # update conversation history for context
-                conversation_history.append({
+                tts_conversation_history.append({
                     "role": "user",
                     "content": f"{member.speaker_tag} {text}"
                 })
                 
-                print(f"  ✓ Generated audio {idx + 1}/{len(script)}")
+                print(f"  ✓ Generated audio {idx + 1}/{len(opinions)}")
                 
             except Exception as e:
                 print(f"  ✗ Failed to generate audio {idx + 1}: {str(e)}")
-                audio_files.append(None)  # continue with null audio
+                audio_files.append(None)
         
         return {
             'question': question,
-            'verdict': final_verdict,
-            'script': script,
+            'opinions': opinions,
             'audio_files': audio_files
         }
