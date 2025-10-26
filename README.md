@@ -1,6 +1,6 @@
-## The Jury — We Bare Bears Council Edition
+## Fuzzy Logic — We Bare Bears Council Edition
 
-An AI-powered conversational system featuring the three We Bare Bears as your personal advisory council.
+Fuzzy Logic brings the iconic bear trio to help with life's everyday dilemmas. Ask Grizzly, Panda, and Ice Bear any question from "Should I text my ex?" to "Is cereal a soup?"—and hear them debate in their iconic voices using BosonAI's voice cloning technology. It's a nostalgic, silly throwback that turns the We Bare Bears trio into your personal advisory council.
 
 ### Features
 
