@@ -31,18 +31,18 @@ if BOSON_API_KEY and GOOGLE_API_KEY:
             boson_api_key=BOSON_API_KEY,
             google_api_key=GOOGLE_API_KEY
         )
-        print("✓ Jury engine initialized successfully")
+        print("Jury engine initialized successfully")
     except Exception as e:
-        print(f"✗ Failed to initialize jury engine: {str(e)}")
+        print(f"ERROR: Failed to initialize jury engine: {str(e)}")
 
 # initialize gemini ASR service
 asr_service = None
 if GOOGLE_API_KEY:
     try:
         asr_service = GeminiASRService(api_key=GOOGLE_API_KEY)
-        print("✓ Gemini ASR initialized successfully")
+        print("Gemini ASR initialized successfully")
     except Exception as e:
-        print(f"✗ Failed to initialize Gemini ASR: {str(e)}")
+        print(f"ERROR: Failed to initialize Gemini ASR: {str(e)}")
 
 # create temp directory for audio files
 TEMP_DIR = os.path.join(os.path.dirname(__file__), 'temp')
@@ -117,7 +117,10 @@ def generate_opinions():
         if not engine:
             return jsonify({'error': 'Engine not initialized'}), 500
         
+        print(f"\n{'='*60}")
         print(f"Generating opinions for: {question}")
+        print(f"Conversation history length: {len(conversation_history)}")
+        print(f"{'='*60}\n")
         
         result = engine.generate_deliberation_with_audio(question, conversation_history)
         
@@ -126,15 +129,23 @@ def generate_opinions():
         os.makedirs(session_dir, exist_ok=True)
         
         opinions = []
+        audio_success_count = 0
         for idx, (entry, audio_bytes) in enumerate(zip(result['opinions'], result['audio_files'])):
             member = entry['member']
             
             audio_index = None
             if audio_bytes:
-                audio_path = os.path.join(session_dir, f'{idx}.wav')
-                with open(audio_path, 'wb') as f:
-                    f.write(audio_bytes)
-                audio_index = idx
+                try:
+                    audio_path = os.path.join(session_dir, f'{idx}.wav')
+                    with open(audio_path, 'wb') as f:
+                        f.write(audio_bytes)
+                    audio_index = idx
+                    audio_success_count += 1
+                    print(f"✓ Saved audio file {idx} for {member.name}")
+                except Exception as audio_error:
+                    print(f"✗ Failed to save audio {idx} for {member.name}: {str(audio_error)}")
+            else:
+                print(f"✗ No audio generated for {member.name}")
             
             opinions.append({
                 'speaker': member.name,
@@ -148,12 +159,23 @@ def generate_opinions():
             'opinions': opinions
         }
         
-        print(f"✓ Generated {len(opinions)} opinions with audio")
+        print(f"\n{'='*60}")
+        print(f"✓ Generated {len(opinions)} opinions")
+        print(f"✓ Audio files saved: {audio_success_count}/{len(opinions)}")
+        print(f"✓ Session ID: {session_id}")
+        print(f"{'='*60}\n")
+        
         return jsonify(response)
     
+    except KeyboardInterrupt:
+        print("\n\n✗ Request interrupted by user")
+        raise
     except Exception as e:
-        print(f"Error generating opinions: {str(e)}")
+        print(f"\n{'='*60}")
+        print(f"✗ ERROR generating opinions: {str(e)}")
+        print(f"{'='*60}")
         print(traceback.format_exc())
+        print(f"{'='*60}\n")
         error_message = str(e)
         return jsonify({
             'error': f'Failed to generate opinions: {error_message}',
@@ -236,10 +258,10 @@ if __name__ == '__main__':
     print("="*50)
     print(f"Port: {port}")
     print(f"Services:")
-    print(f"  - BosonAI TTS: {'✓' if BOSON_API_KEY else '✗'}")
-    print(f"  - Google Gemini LLM: {'✓' if GOOGLE_API_KEY else '✗'}")
-    print(f"  - Gemini ASR: {'✓' if asr_service else '✗'}")
-    print(f"Engine: {'✓ Ready' if engine else '✗ Not initialized'}")
+    print(f"  - BosonAI TTS: {'OK' if BOSON_API_KEY else 'NOT CONFIGURED'}")
+    print(f"  - Google Gemini LLM: {'OK' if GOOGLE_API_KEY else 'NOT CONFIGURED'}")
+    print(f"  - Gemini ASR: {'OK' if asr_service else 'NOT CONFIGURED'}")
+    print(f"Engine: {'Ready' if engine else 'Not initialized'}")
     print("="*50 + "\n")
     app.run(debug=True, host='0.0.0.0', port=port)
 

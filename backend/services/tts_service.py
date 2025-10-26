@@ -38,7 +38,7 @@ class TTSService:
     
     def synthesize_speech(self, speaker_tag: str, ref_audio_path: str, 
                          ref_transcript: str, text: str,
-                         conversation_history: list = None) -> bytes:
+                         conversation_history: list = None, timeout: int = 300) -> bytes:
         """generate speech from text using voice cloning
         
         Args:
@@ -47,13 +47,17 @@ class TTSService:
             ref_transcript: transcript of reference audio with speaker tag
             text: text to convert to speech
             conversation_history: previous messages for context (optional)
+            timeout: timeout in seconds for API call (default 300s = 5min)
         
         Returns:
             audio data as bytes (WAV format)
         """
         # If reference audio is missing, fall back to simple TTS
         if not ref_audio_path or not os.path.exists(ref_audio_path):
+            print(f"WARNING: Reference audio not found: {ref_audio_path}, falling back to simple TTS")
             return self._simple_tts(text)
+        
+        print(f"Using reference audio: {ref_audio_path}")
 
         try:
             # encode reference audio
@@ -79,35 +83,54 @@ class TTSService:
             # add current text request
             messages.append({"role": "user", "content": f"{speaker_tag} {text}"})
 
-            # call BosonAI API for cloning
+            # call BosonAI API for cloning with controlled parameters and timeout
+            print(f"Calling BosonAI API with timeout={timeout}s...")
             resp = self.client.chat.completions.create(
                 model="higgs-audio-generation-Hackathon",
                 messages=messages,
                 modalities=["text", "audio"],
                 max_completion_tokens=4096,
-                temperature=1.0,
-                top_p=0.95,
+                temperature=0.7,  # lowered from 1.0 to reduce over-the-top emotions
+                top_p=0.85,       # lowered from 0.95 for more consistency
                 stream=False,
                 stop=["<|eot_id|>", "<|end_of_text|>", "<|audio_eos|>"],
-                extra_body={"top_k": 50},
+                extra_body={"top_k": 40},  # lowered from 50 for more focused output
+                timeout=timeout,
             )
 
             # extract and decode audio
             audio_b64 = resp.choices[0].message.audio.data
+            print(f"✓ Voice cloning successful")
             return base64.b64decode(audio_b64)
 
-        except Exception:
+        except Exception as e:
             # graceful fallback to simple TTS if cloning fails
-            return self._simple_tts(text)
+            error_msg = str(e)
+            if 'timeout' in error_msg.lower():
+                print(f"✗ Voice cloning timed out after {timeout}s, falling back to simple TTS")
+            else:
+                print(f"✗ Voice cloning failed: {error_msg}, falling back to simple TTS")
+            import traceback
+            traceback.print_exc()
+            
+            # try simple TTS as fallback
+            try:
+                return self._simple_tts(text)
+            except Exception as fallback_error:
+                print(f"✗ Fallback TTS also failed: {str(fallback_error)}")
+                # return None instead of crashing the entire backend
+                return None
 
-    def _simple_tts(self, text: str) -> bytes:
+    def _simple_tts(self, text: str, timeout: int = 300) -> bytes:
         """Simple TTS fallback (no cloning). Returns WAV bytes."""
+        print(f"WARNING: Using fallback TTS with 'en_woman' voice")
         # Request PCM16 stream and wrap into WAV container in-memory
         res = self.client.audio.speech.create(
             model="higgs-audio-generation-Hackathon",
             voice="en_woman",
             input=text,
             response_format="pcm",
+            timeout=timeout,
         )
 
         pcm_bytes = res.content

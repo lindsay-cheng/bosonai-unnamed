@@ -73,7 +73,16 @@ export default function HomePage({ onRecordingComplete }: HomePageProps) {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-start pt-20 p-6 overflow-hidden">
+    <div className="relative min-h-screen flex flex-col overflow-hidden">
+      {/* recording border indicator */}
+      {isRecording && (
+        <>
+          <div className="fixed inset-0 pointer-events-none z-50 border-8 border-red-500 animate-pulse"></div>
+          <div className="fixed inset-0 pointer-events-none z-50 border-4 border-red-400 opacity-50 animate-ping"></div>
+        </>
+      )}
+      
+      {/* background layers */}
       <div className="absolute inset-0 -z-10">
         <Image
           src="/home.png"
@@ -88,58 +97,76 @@ export default function HomePage({ onRecordingComplete }: HomePageProps) {
           scene="https://prod.spline.design/0km-REa2nFnxr6je/scene.splinecode"
         />
       </div>
-      <div className="relative z-10 text-center space-y-12">
-        <div className="space-y-4">
-          <h1 className="text-5xl md:text-6xl font-bold text-black leading-relaxed">
-            Have a problem?
-            <br />
-            Ask the Bears.
-          </h1>
-        </div>
 
-        <div className="flex flex-col items-center space-y-8">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`relative w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer ${
-              isRecording
-                ? "bg-red-500 hover:bg-red-600 scale-100"
-                : "bg-white hover:bg-gray-100 hover:scale-105"
-            }`}
-            aria-label={isRecording ? "Stop recording" : "Start recording"}
-          >
-            {isRecording && (
-              <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75"></div>
-            )}
-            <div className="relative">
-              {isRecording ? (
-                <div className="w-8 h-8 bg-white rounded-sm"></div>
-              ) : (
-                <svg
-                  className="w-12 h-12 text-black"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                  />
-                </svg>
+      {/* header section */}
+      <div className="relative z-10 pt-8 flex flex-col items-center pointer-events-none">
+        {/* title */}
+        <h1 className="text-5xl md:text-6xl font-bold text-black/80 mb-4">
+          Fuzzy Logic
+        </h1>
+        
+        {/* subtitle with microphone button */}
+        <div className="flex items-center justify-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-black/80">
+            Have a problem? Ask the Bears.
+          </h2>
+          <div className="relative ml-4 group pointer-events-auto">
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 ease-out cursor-pointer shadow-2xl ${
+                isRecording
+                  ? "bg-red-500 hover:bg-red-600 scale-110 shadow-red-500/50"
+                  : "bg-white hover:bg-gray-100 hover:scale-110 shadow-black/20 animate-[pulse_3s_ease-in-out_infinite]"
+              }`}
+              style={{ pointerEvents: 'auto' }}
+              aria-label={isRecording ? "Stop recording" : "Start recording"}
+            >
+              {isRecording && (
+                <div className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75 pointer-events-none"></div>
               )}
-            </div>
-          </button>
-
-          {isRecording && (
-            <div className="flex flex-col items-center space-y-2 animate-in fade-in duration-300">
-              <div className="text-2xl text-black font-mono tabular-nums">
-                {formatTime(recordingTime)}
+              <div className="relative transition-transform duration-300 pointer-events-none">
+                {isRecording ? (
+                  <div className="w-4 h-4 bg-white rounded-sm"></div>
+                ) : (
+                  <svg
+                    className="w-6 h-6 text-black"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                    />
+                  </svg>
+                )}
               </div>
-            </div>
-          )}
+            </button>
+            
+            {/* tooltip hint */}
+            {!isRecording && (
+              <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                <div className="bg-black/80 text-white text-sm py-2 px-3 rounded-lg shadow-lg">
+                  Click to speak
+                  <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black/80 rotate-45"></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* recording timer */}
+      {isRecording && (
+        <div className="relative z-10 flex flex-col items-center space-y-2 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pointer-events-none">
+          <div className="text-3xl text-black font-mono tabular-nums font-bold">
+            {formatTime(recordingTime)}
+          </div>
+          <p className="text-black/60 text-sm">Recording...</p>
+        </div>
+      )}
     </div>
   );
 }

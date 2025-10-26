@@ -61,9 +61,18 @@ export default function Home() {
       setConversationHistory(prev => [...prev, { role: 'user', content: data.question }]);
       setAppState('deliberation');
     } catch (error) {
-      console.error('Error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to get bear opinions';
-      alert(`${errorMessage}. Please check the console for details.`);
+      console.error('Recording error:', error);
+      let errorMessage = 'Failed to get bear opinions';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Cannot connect to backend. Please make sure the backend server is running on port 8080.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(`${errorMessage}\n\nPlease check the console for details.`);
       setAppState('home');
     }
   }, [conversationHistory]);
@@ -86,7 +95,9 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get follow-up opinions');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Backend error:', errorData);
+        throw new Error(errorData.error || 'Failed to get follow-up opinions');
       }
 
       const data = await response.json();
@@ -99,8 +110,18 @@ export default function Home() {
       setConversationHistory(prev => [...prev, { role: 'user', content: followUpText }]);
       setIsLoadingFollowUp(false);
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to get follow-up opinions. Please try again.');
+      console.error('Follow-up error:', error);
+      let errorMessage = 'Failed to get follow-up opinions';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = 'Cannot connect to backend. Please make sure the backend server is running on port 8080.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      alert(`${errorMessage}\n\nPlease check the console for details.`);
       setIsLoadingFollowUp(false);
     }
   }, [deliberationData, conversationHistory]);
@@ -113,20 +134,26 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black">
-      {appState === 'home' && (
-        <HomePage onRecordingComplete={handleRecordingComplete} />
-      )}
-      {appState === 'thinking' && <ThinkingPage />}
-      {appState === 'deliberation' && deliberationData && (
-        <DeliberationPage
-          data={deliberationData}
-          onReset={handleReset}
-          onFollowUp={handleFollowUp}
-          isLoading={isLoadingFollowUp}
-          apiUrl={API_BASE_URL}
-        />
-      )}
+    <div className="min-h-screen bg-black relative">
+      <div className={`transition-opacity duration-500 ${appState === 'home' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'}`}>
+        {appState === 'home' && (
+          <HomePage onRecordingComplete={handleRecordingComplete} />
+        )}
+      </div>
+      <div className={`transition-opacity duration-500 ${appState === 'thinking' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'}`}>
+        {appState === 'thinking' && <ThinkingPage />}
+      </div>
+      <div className={`transition-opacity duration-500 ${appState === 'deliberation' ? 'opacity-100' : 'opacity-0 absolute inset-0 pointer-events-none'}`}>
+        {appState === 'deliberation' && deliberationData && (
+          <DeliberationPage
+            data={deliberationData}
+            onReset={handleReset}
+            onFollowUp={handleFollowUp}
+            isLoading={isLoadingFollowUp}
+            apiUrl={API_BASE_URL}
+          />
+        )}
+      </div>
     </div>
   );
 }

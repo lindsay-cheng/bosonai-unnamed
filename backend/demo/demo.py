@@ -91,7 +91,7 @@ while True:
         audio_data = generate_speech(llm_response)
         output_file = f"output_{counter}.wav"
         open(output_file, "wb").write(audio_data)
-        print(f"✓ Audio saved to {output_file}")
+        print(f"Audio saved to {output_file}")
         counter += 1
         
     except Exception as e:

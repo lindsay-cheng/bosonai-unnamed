@@ -36,14 +36,15 @@ class JuryEngine:
     
     def _initialize_jury_members(self) -> List[JuryMember]:
         """define the We Bare Bears personalities"""
-        voices_dir = os.path.join(os.path.dirname(__file__), 'voices')
+        # point to the ref-audio directory in the project root
+        ref_audio_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'ref-audio')
         
         grizzly = JuryMember(
             id="grizzly",
             name="Grizzly",
             speaker_tag="[SPEAKER1]",
-            ref_audio=os.path.join(voices_dir, "grizzly.wav"),
-            ref_transcript="[SPEAKER1] Hey there! I'm Grizzly, and I'm all about living life to the fullest! Let's make this happen!",
+            ref_audio=os.path.join(ref_audio_dir, "grizz.wav"),
+            ref_transcript="[SPEAKER1] They don't know what they're missing. All right, finally. Time for the easiest part. Ah! Right on time. Well, good night, Mickey-chan. I will see you in June. Can't sleep. Can? Sleepy. Help me! Help me, Mickey-chan.",
             personality_prompt="""You are Grizzly from We Bare Bears, the enthusiastic and outgoing leader of the bear brothers.
 
 Characteristics:
@@ -63,8 +64,8 @@ When responding to questions or comments, give an enthusiastic and action-orient
             id="panda",
             name="Panda",
             speaker_tag="[SPEAKER2]",
-            ref_audio=os.path.join(voices_dir, "panda.wav"),
-            ref_transcript="[SPEAKER2] Um, hi, I'm Panda. I'm not sure about this, but maybe we should think it through carefully?",
+            ref_audio=os.path.join(ref_audio_dir, "panda.wav"),
+            ref_transcript="[SPEAKER2] Dad, look, I have to return all this stuff. Raw denim is supposed to be real comfy, but all these are too pinchy for my Reuben-esque waistline. Oh. It'll be better if I go myself. Uh, the cashier was really cute, so I think I'm just gonna ask her out, but, you know, she's super cool, so I wanna, you know, kinda project, like, a Lone Wolf vibe, I think. Anyway, love you, bye!",
             personality_prompt="""You are Panda from We Bare Bears, the sensitive and artistic middle brother.
 
 Characteristics:
@@ -85,8 +86,8 @@ When responding to questions or comments, express your worries and uncertainties
             id="ice_bear",
             name="Ice Bear",
             speaker_tag="[SPEAKER3]",
-            ref_audio=os.path.join(voices_dir, "ice_bear.wav"),
-            ref_transcript="[SPEAKER3] Ice Bear speaks in third person. Ice Bear has many skills. Ice Bear will help.",
+            ref_audio=os.path.join(ref_audio_dir, "ice_bear.wav"),
+            ref_transcript="[SPEAKER3] Ice Bear likes turtle. Ice Bear is tired of staring at this guy's butt. Ice Bear hates butts. Don't ditch Ice Bear. Ice Bear putting finishing touches on your turtleneck. Ice Bear going to fill stomach like pinata today. Ice Bear is still proud of you. Proud Bear. Ice Bear doesn't need beauty sleep. Ice Bear needs latte. Ice Bear wants justice. Ice Bear to the rescue. Ice Bear is survivor. Hero. Ice Bear wants to be top bear now. Ice Bear has ninja stars. Ice Bear bought these legally. Ice Bear will coach you into manhood. Ice Bear believed in you. Cupcake. Cupcake. Ice Bear thinks you're precious. Ice Bear panda bear.",
             personality_prompt="""You are Ice Bear from We Bare Bears, the mysterious and capable youngest brother who always speaks in third person.
 
 Characteristics:
@@ -153,7 +154,7 @@ When responding to questions or comments, speak only in third person. Give myste
         print(f"Generating opinions for: {question}")
         opinions = self.generate_opinions(question, conversation_history)
         
-        print(f"✓ Generated {len(opinions)} opinions")
+        print(f"Generated {len(opinions)} opinions")
         
         return {
             'question': question,
@@ -186,25 +187,37 @@ When responding to questions or comments, speak only in third person. Give myste
                 member = entry['member']
                 text = entry['text']
                 
+                print(f"\n[{idx + 1}/{len(opinions)}] Generating audio for {member.name}")
+                print(f"   Text preview: {text[:80]}...")
+                
                 audio_bytes = self.tts_service.synthesize_speech(
                     speaker_tag=member.speaker_tag,
                     ref_audio_path=member.ref_audio,
                     ref_transcript=member.ref_transcript,
                     text=text,
-                    conversation_history=tts_conversation_history.copy()
+                    conversation_history=tts_conversation_history.copy(),
+                    timeout=300  # 5 minute timeout per audio generation (bosonai can be slow)
                 )
                 
-                audio_files.append(audio_bytes)
+                # check if audio generation succeeded
+                if audio_bytes:
+                    audio_files.append(audio_bytes)
+                    tts_conversation_history.append({
+                        "role": "user",
+                        "content": f"{member.speaker_tag} {text}"
+                    })
+                    print(f"   ✓ Audio generated successfully ({len(audio_bytes)} bytes)")
+                else:
+                    audio_files.append(None)
+                    print(f"   ✗ Audio generation failed (returned None)")
                 
-                tts_conversation_history.append({
-                    "role": "user",
-                    "content": f"{member.speaker_tag} {text}"
-                })
-                
-                print(f"  ✓ Generated audio {idx + 1}/{len(opinions)}")
-                
+            except KeyboardInterrupt:
+                print(f"\n✗ Audio generation interrupted by user")
+                raise
             except Exception as e:
-                print(f"  ✗ Failed to generate audio {idx + 1}: {str(e)}")
+                print(f"   ✗ Exception during audio generation: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 audio_files.append(None)
         
         return {
